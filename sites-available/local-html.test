@@ -1,0 +1,18 @@
+#
+# Virtual Host:   Static configuration (public)
+# Project:        local-html.test
+#
+
+server {
+  listen 80;
+  listen [::]:80;
+
+  server_name local-html.test;
+
+  root /var/www/local-html.test/public_html;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ =404;
+  }
+}

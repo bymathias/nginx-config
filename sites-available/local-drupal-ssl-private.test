@@ -1,0 +1,128 @@
+#
+# Virtual Host:   Drupal configuration (SSL - Private)
+# Project:        local-drupal-ssl-private.test
+#
+
+# Reserve 1MB under the name 'uploads' to track uploads
+# upload_progress uploads 1m;
+
+# Upstream to abstract backend connection(s) for php
+upstream up-local-drupal-ssl-private-test {
+    server unix:/tmp/php-fpm.sock;
+    server 127.0.0.1:9000;
+}
+
+# Server domain rewrite
+server {
+    listen 80;  # Server listen for IPv4
+    server_name www.local-drupal-ssl-private.test local-drupal-ssl-private.test;
+
+    location / {
+        rewrite ^ https://$server_name$request_uri permanent;
+    }
+}
+
+# HTTPS Server
+server {
+    listen 443 ssl;
+    server_name www.local-drupal-ssl-private.test local-drupal-ssl-private.test;
+
+    # SSL certificate and key
+    ssl_certificate /var/ssl/www.local-drupal-ssl-private.test.crt;
+    ssl_certificate_key /var/ssl/www.local-drupal-ssl-private.test.key;
+
+    # Access and error logs
+    access_log /var/www/local-drupal-ssl-private.test/logs/access.log;
+    error_log /var/www/local-drupal-ssl-private.test/logs/error.log;
+
+    root /var/www/local-drupal-ssl-private.test/public_html;
+
+    # Strict Transport Security header for enhanced security. See
+    # http://www.chromium.org/sts. I've set it to 2 hours; set it to
+    # whichever age you want.
+    add_header Strict-Transport-Security "max-age=7200";
+
+    # See the blacklist.conf file at the parent dir: /etc/nginx.
+    # Deny access based on the User-Agent header.
+    if ($bad_bot) {
+        return 444;
+    }
+
+    # Deny access based on the Referer header.
+    if ($bad_referer) {
+        return 444;
+    }
+
+    # Do not load file with extensions
+    location ~* \.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|theme|tpl(\.php)?|xtmpl)$|^(\..*|Entries.*|Repository|Root|Tag|Template)$|\.php_ {
+        deny all;
+    }
+
+    # Deny all attempts to access hidden files.
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Trying to access private files directly returns a 404.
+    location ^~ /sites/default/files/private/ {
+        internal;
+    }
+
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+    }
+
+    location = /robots.txt {
+        #allow all;     # Private site
+        deny all;
+        log_not_found off;
+        access_log off;
+    }
+
+    # All static files will be served directly.
+    location ~* ^.+\.(?:css|js|html|xml)$ {
+        expires 30d;
+        access_log off;
+    }
+
+    # Upload progress module
+    # location ~ (?<upload_form_uri>.*)/x-progress-id:(?<upload_id>\d*) {
+    #    rewrite ^ $upload_form_uri?X-Progress-ID=$upload_id;
+    # }
+
+    # Now the above rewrite must be matched by a location that
+    # activates it and references the above defined upload tracking zone.
+    # location ^~ /progress {
+    #    upload_progress_json_output;
+    #    report_uploads uploads;
+    # }
+
+    location / {
+        index index.html index.htm index.php;
+        error_page 404 = @drupal;
+    }
+
+    location @drupal {
+        rewrite ^(.*)$ /index.php?q=$1 last;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
+        include /etc/nginx/conf/fastcgi_params;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME /var/www/local-drupal-ssl-private.test/public_html$fastcgi_script_name;
+        fastcgi_intercept_errors on;
+        fastcgi_pass up-local-drupal-ssl-private-test;
+        # Track uploads for this location on the zone defined above
+        # with a 60 seconds timeout.
+        # track_uploads uploads 60s;
+        # Hide the X-Drupal-Cache header provided by Pressflow.
+        fastcgi_hide_header 'X-Drupal-Cache';
+        # Hide the Drupal 7 header X-Generator.
+        fastcgi_hide_header 'X-Generator';
+    }
+}
