@@ -1,7 +1,5 @@
-#
-# Virtual Host:   Dynamic (php) configuration (public)
-# Project:        local-php.test
-#
+# Virtual Host configuration
+# local-php.test
 
 server {
   listen 80;

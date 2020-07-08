@@ -5,9 +5,9 @@ server {
   listen 80;
   listen [::]:80;
 
-  server_name local-wordpress.test;
+  server_name local-woocommerce.test;
 
-  root /var/www/local-wordpress.test/public_html/;
+  root /var/www/local-woocommerce.test/public_html/;
   index index.php index.html;
 
   location / {

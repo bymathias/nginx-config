@@ -1,0 +1,21 @@
+# Virtual Host configuration
+# local-html.test
+
+server {
+  listen 80;
+  listen [::]:80;
+
+  server_name local-ghost.test;
+
+  # root /var/www/local-html.test/public_html;
+  # index index.html;
+
+  # location / {
+  #   try_files $uri $uri/ =404;
+  # }
+  location / {
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   Host      $http_host;
+    proxy_pass         http://127.0.0.1:2368;
+  }
+}

@@ -1,7 +1,5 @@
-#
-# Virtual Host:   Static configuration (public)
-# Project:        local-html.test
-#
+# Virtual Host configuration
+# local-html.test
 
 server {
   listen 80;
